@@ -3,7 +3,7 @@
 A Telegram bot I created, with chat and cryptocurrency market analysis capabilities, designed for the community to demonstrate the capabilities of the models. Powered by Sentient
 
 Key features:
-- Database support (every dialogue with the user is saved)
+- Database support (Dobby keeps track of the conversation context)
 - Use of API for up-to-date prices and dates for cryptocurrencies
 - Ability to exit the dialogue and re-enter at any time
 
