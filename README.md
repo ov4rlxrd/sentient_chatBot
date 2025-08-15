@@ -7,4 +7,6 @@ Key features:
 - Use of API for up-to-date prices and dates for cryptocurrencies
 - Ability to exit the dialogue and re-enter at any time
 
+Please note that I am not a professional developer; I do this for fun. If you find any bugs or critical issues, please write to X. Thank you.
+
 # Please note that this is an unofficial bot, created solely for the community!
