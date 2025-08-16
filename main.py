@@ -151,6 +151,46 @@ async def market_analysis(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer("‼️‼️Please note that the information provided in Dobby may be incomplete. This is not financial advice, but merely one example of how this model can be used.‼️‼️")
     await callback.answer()
 
+# inline mode
+@dp.inline_query()
+async def inline_handler(inline_query: InlineQuery):
+    query_text = inline_query.query.strip()
+
+    if not query_text:
+        results = [
+            InlineQueryResultArticle(
+                id=str(uuid.uuid4()),
+                title="Hi, im Dobby ask me about u want 🤖",
+                description="Type ur question",
+                input_message_content=InputTextMessageContent(
+                    message_text="Type ur question 👇"
+                ),
+            )
+        ]
+        await bot.answer_inline_query(inline_query.id, results=results, cache_time=1)
+        return
+
+    response = client.chat.completions.create(
+        model="accounts/sentientfoundation/models/dobby-unhinged-llama-3-3-70b-new",
+        messages=[
+            {"role": "system", "content": "You are a friendly assistant."},
+            {"role": "user", "content": query_text},
+        ]
+    )
+
+    answer = response.choices[0].message.content
+
+    result_id: str = hashlib.md5(query_text.encode()).hexdigest()
+    article = InlineQueryResultArticle(
+        id=result_id,
+        title=f"Answer on: {query_text}",
+        description=answer[:50] + "..." if len(answer) > 50 else answer,
+        input_message_content=InputTextMessageContent(message_text=answer),
+    )
+
+    await bot.answer_inline_query(inline_query.id, results=[article], cache_time=1)
+
+
 
 
 connection = create_connection("users.sqlite")
@@ -166,4 +206,5 @@ async def main():
 
 
 if __name__ == '__main__':
+
     asyncio.run(main())
