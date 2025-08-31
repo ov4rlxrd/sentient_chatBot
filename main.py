@@ -37,6 +37,9 @@ CREATE TABLE IF NOT EXISTS users (
 class ChatState(StatesGroup):
     chat_with_dobby = State()
     market_analysis = State()
+    ai_battle_1 = State()
+    ai_battle_2 = State()
+    ai_battle_3 = State()
 
 
 
@@ -151,6 +154,36 @@ async def market_analysis(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer("‼️‼️Please note that the information provided in Dobby may be incomplete. This is not financial advice, but merely one example of how this model can be used.‼️‼️")
     await callback.answer()
 
+@dp.callback_query(F.data == 'ai_battle')
+async def ai_battle_1(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(ChatState.ai_battle_1)
+    await callback.message.answer("Welcome to AI Battle, Here, Dobby will analyze the two people you entered and try to predict what their battle would look like in the comics. Please enter first fighter 👇")
+    await callback.answer()
+
+@dp.message(StateFilter(ChatState.ai_battle_1), F.text)
+async def ai_battle_2(message: Message, state: FSMContext):
+    await state.update_data(fighter1=message.text)
+    await message.answer("Enter second fighter 👇")
+    await state.set_state(ChatState.ai_battle_2)
+
+@dp.message(StateFilter(ChatState.ai_battle_2), F.text)
+async def ai_battle_3(message: Message, state: FSMContext):
+    await state.update_data(fighter2=message.text)
+    await message.answer("Please wait!")
+    data = await state.get_data()
+    prompt = f'Describe an epic battle between {data["fighter1"]} and {data["fighter2"]} in 3 rounds, as if they were comic book heroes, without politics or hate speech. Add humor and drama. At the end, name the winner.'
+    response = client.chat.completions.create(
+            model="accounts/sentientfoundation/models/dobby-unhinged-llama-3-3-70b-new",
+            messages=[{"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": prompt}]
+        )
+    await message.answer(response.choices[0].message.content)
+    await message.answer("‼️‼️Please note that the information provided in Dobby may be incomplete.")
+    await message.answer("Hi, im Dobby im here to help you\n\nMade by @ov4rlxrd for Sentient ❤️", reply_markup=kb_1)
+
+
+
+
 # inline mode
 @dp.inline_query()
 async def inline_handler(inline_query: InlineQuery):
@@ -208,3 +241,4 @@ async def main():
 if __name__ == '__main__':
 
     asyncio.run(main())
+
