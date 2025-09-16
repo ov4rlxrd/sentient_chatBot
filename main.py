@@ -19,14 +19,17 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from BD import create_connection, execute_query, execute_read_query
 from kb import kb_1
+load_dotenv()
 
-API_TOKEN = "UR API TOKEN"
+API_TOKEN = os.getenv("TG_API_TOKEN")
 
 dp = Dispatcher(storage=MemoryStorage())
 bot = Bot(token=API_TOKEN)
 
-client = Fireworks(api_key="UR API TOKEN")
 
+client = Fireworks(api_key=os.getenv("FW_API_KEY"))
+
+BEARER_TOKEN = os.getenv("BEARER_TOKEN")
 
 create_users_table = """
 CREATE TABLE IF NOT EXISTS users (
@@ -40,7 +43,7 @@ class ChatState(StatesGroup):
     ai_battle_1 = State()
     ai_battle_2 = State()
     ai_battle_3 = State()
-
+    tweet_details = State()
 
 
 
@@ -181,7 +184,48 @@ async def ai_battle_3(message: Message, state: FSMContext):
     await message.answer("‼️‼️Please note that the information provided in Dobby may be incomplete.")
     await message.answer("Hi, im Dobby im here to help you\n\nMade by @ov4rlxrd for Sentient ❤️", reply_markup=kb_1)
 
+@dp.callback_query(F.data == 'tweet_details')
+async def tweet_details_1(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(ChatState.tweet_details)
+    await callback.message.answer("Please enter the tweet URL 👇")
+    await callback.answer()
 
+
+@dp.message(StateFilter(ChatState.tweet_details), F.text)
+async def tweet_details_2(message: Message, state: FSMContext):
+    prompt = (
+        "You are a social media analyst. I will provide you with posts from Twitter (X)." 
+        "Your task is to:"
+
+        "1. Identify the main topic and context of the post. " 
+        "2. Determine the emotional tone (positive, neutral, negative).  "
+        "3. Define the target audience (e.g., investors, fans, project community, general public, etc.)."
+        "4. Summarize the post in 1–2 sentences.  "
+        "5. (Optional) Suggest an idea for a reply or retweet if appropriate."
+        "Post text is below:\n"
+    )
+
+    text = get_tweet_text(message.text)
+    prompt += text
+
+    response = client.chat.completions.create(
+        model="accounts/sentientfoundation/models/dobby-unhinged-llama-3-3-70b-new",
+        messages=[{"role": "system", "content": "You are a social media analyst"},
+                  {"role": "user", "content": prompt}]
+    )
+    await message.answer(response.choices[0].message.content)
+
+def get_tweet_text(url: str) -> str:
+
+    tweet_id = url.rstrip("/").split("/")[-1]
+
+    endpoint = f"https://api.twitter.com/2/tweets/{tweet_id}?tweet.fields=created_at,author_id"
+    headers = {"Authorization": f"Bearer {BEARER_TOKEN}"}
+
+    response = requests.get(endpoint, headers=headers)
+
+    data = response.json()
+    return data["data"]["text"]
 
 
 # inline mode
@@ -241,4 +285,5 @@ async def main():
 if __name__ == '__main__':
 
     asyncio.run(main())
+
 
