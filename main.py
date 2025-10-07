@@ -43,6 +43,7 @@ class ChatState(StatesGroup):
     ai_battle_1 = State()
     ai_battle_2 = State()
     ai_battle_3 = State()
+    roma_search = State()
     tweet_details = State()
 
 
@@ -228,6 +229,43 @@ def get_tweet_text(url: str) -> str:
     return data["data"]["text"]
 
 
+
+
+@dp.callback_query(F.data == 'roma_search')
+async def roma_search(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(ChatState.roma_search)
+    await callback.message.answer("Describe what you want to research or accomplish.. 👇")
+    await callback.answer()
+
+
+@dp.message(StateFilter(ChatState.roma_search), F.text)
+async def roma_search_2(message: Message, state: FSMContext):
+    user_search = message.text
+    await message.answer("Sending your request to the server...")
+    
+    timeout = aiohttp.ClientTimeout(total=3600)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.post(API_URL, json={"goal": user_search, "profile": "general_agent"}) as resp:
+            if resp.status != 200: 
+                await message.answer(f"Server returned error: {resp.status}")
+                return
+            task = await resp.json()
+
+    status = task.get("status")
+    if status.lower() == "completed":
+        with open("task_debug.json", "w", encoding="utf-8") as f:
+            json.dump(task, f, indent=2, ensure_ascii=False)
+        content = task["final_output"]
+        await message.answer(content)
+    else:
+        await message.answer(f"Task status: {status}. Result not ready yet.")
+    
+    await state.clear()
+
+
+
+
+
 # inline mode
 @dp.inline_query()
 async def inline_handler(inline_query: InlineQuery):
@@ -285,5 +323,6 @@ async def main():
 if __name__ == '__main__':
 
     asyncio.run(main())
+
 
 
